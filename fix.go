@@ -200,7 +200,25 @@ func importPath(s *ast.ImportSpec) string {
 
 // rewriteImport rewrites any import of path oldPath to path newPath.
 func rewriteImport(f *ast.File, oldPath, newPath string, regex bool) (rewrote bool) {
-
+	for _, cl := range f.Comments {
+		if cl.List != nil {
+			for _, c := range cl.List {
+				if strings.HasPrefix(c.Text, "// import ") {
+					rewrote = true
+					re, err := regexp.Compile(oldPath)
+					if err != nil {
+						fmt.Printf("Error parsing oldPath as regex: %v", err)
+						os.Exit(1)
+					}
+					if re.Match([]byte(c.Text)) {
+						rewrote = true
+						newStr := re.ReplaceAllString(c.Text, newPath)
+						c.Text = newStr
+					}
+				}
+			}
+		}
+	}
 	for _, imp := range f.Imports {
 		if regex {
 			re, err := regexp.Compile(oldPath)
